@@ -1,0 +1,1616 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Psychrometric Load Calculator</title>
+  <meta name="description" content="Mobile HVAC psychrometric load calculator for airflow, mixed air, coil load, grains, dew point, wet bulb, tons, SHR, and condensate.">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Psych Load">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7f5;
+      --panel: #ffffff;
+      --panel-strong: #eef5f2;
+      --ink: #18211f;
+      --muted: #60706b;
+      --line: #d8e2dd;
+      --accent: #0f766e;
+      --accent-2: #b45309;
+      --accent-3: #2563eb;
+      --danger: #b91c1c;
+      --shadow: 0 16px 34px rgba(28, 46, 40, 0.11);
+      --touch: 46px;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-width: 320px;
+      min-height: 100%;
+      background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0) 360px),
+        var(--bg);
+      overscroll-behavior-y: none;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      width: min(1480px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: max(22px, env(safe-area-inset-top)) 0 max(36px, env(safe-area-inset-bottom));
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .topbar > div {
+      min-width: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 4px;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.72rem, 2.8vw, 3.05rem);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 850px;
+      line-height: 1.42;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      min-width: 220px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: var(--touch);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      padding: 8px 12px;
+      font-weight: 750;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+    }
+
+    .btn:hover,
+    .btn:focus-visible {
+      border-color: #9bb5ac;
+      outline: none;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn svg {
+      width: 17px;
+      height: 17px;
+      flex: none;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(330px, 430px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      min-width: 0;
+    }
+
+    .left-stack,
+    .right-stack {
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .panel-inner {
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px;
+      background: var(--panel-strong);
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1.02rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .panel-note {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.35;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .input-grid.single {
+      grid-template-columns: 1fr;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .field span {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 780;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: var(--touch);
+      border: 1px solid #c7d6d0;
+      border-radius: var(--radius);
+      background: #fff;
+      color: var(--ink);
+      padding: 8px 10px;
+      font-size: 16px;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      outline: 2px solid rgba(15, 118, 110, 0.13);
+    }
+
+    .field input[readonly] {
+      color: var(--muted);
+      background: #f6faf8;
+    }
+
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 2px;
+      padding: 3px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #eaf1ee;
+    }
+
+    .segmented button {
+      min-height: 40px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 800;
+      padding: 6px 8px;
+    }
+
+    .segmented button.active {
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .switch {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: var(--touch);
+      color: var(--muted);
+      font-weight: 750;
+      font-size: 0.92rem;
+    }
+
+    .switch input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .state-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .state-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .state-card .panel-head {
+      border-radius: 0;
+      padding: 12px 14px;
+    }
+
+    .state-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 74px;
+      min-height: 28px;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--accent);
+      border: 1px solid #bfd5ce;
+      font-size: 0.78rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .state-card.outdoor .state-chip {
+      color: var(--accent-2);
+      border-color: #f1cfa1;
+    }
+
+    .state-card.supply .state-chip {
+      color: var(--accent-3);
+      border-color: #c7d6ff;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 8px;
+      min-height: 58px;
+      background: #f8fbfa;
+    }
+
+    .mini b {
+      display: block;
+      font-size: 0.98rem;
+      line-height: 1.12;
+      overflow-wrap: anywhere;
+    }
+
+    .mini span {
+      color: var(--muted);
+      display: block;
+      font-size: 0.74rem;
+      line-height: 1.2;
+      margin-top: 4px;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #fff;
+      min-height: 120px;
+      display: grid;
+      align-content: space-between;
+      gap: 8px;
+    }
+
+    .kpi .label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .kpi .value {
+      font-size: clamp(1.32rem, 2.4vw, 2.15rem);
+      font-weight: 850;
+      line-height: 1.02;
+      overflow-wrap: anywhere;
+    }
+
+    .kpi .sub {
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.3;
+    }
+
+    .pill {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #e7f3f1;
+      color: var(--accent);
+      font-size: 0.76rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .pill.warn {
+      background: #fff4df;
+      color: var(--accent-2);
+    }
+
+    .pill.heat {
+      background: #fef2f2;
+      color: var(--danger);
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .detail {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #fff;
+      min-width: 0;
+    }
+
+    .detail h3 {
+      margin: 0 0 10px;
+      font-size: 0.95rem;
+      line-height: 1.2;
+    }
+
+    .detail dl {
+      display: grid;
+      grid-template-columns: minmax(90px, 1fr) minmax(110px, auto);
+      gap: 7px 10px;
+      margin: 0;
+      align-items: baseline;
+    }
+
+    .detail dt {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .detail dd {
+      margin: 0;
+      text-align: right;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+    }
+
+    .chart-wrap {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 210px;
+      gap: 14px;
+      align-items: stretch;
+      min-width: 0;
+    }
+
+    .chart-shell {
+      min-height: 320px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #fbfdfc;
+      min-width: 0;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 320px;
+    }
+
+    .legend {
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      font-size: 0.86rem;
+      font-weight: 750;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      flex: none;
+      background: var(--accent);
+    }
+
+    .dot.outdoor { background: var(--accent-2); }
+    .dot.return { background: var(--accent); }
+    .dot.mix { background: #7c3aed; }
+    .dot.supply { background: var(--accent-3); }
+    .dot.delivered { background: #be123c; }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      min-width: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+      font-weight: 850;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      background: #f7faf9;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .assumptions {
+      margin: 0;
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      line-height: 1.42;
+      font-size: 0.88rem;
+    }
+
+    .assumptions strong {
+      color: var(--ink);
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.84rem;
+      min-height: 20px;
+      margin-top: 8px;
+    }
+
+    .error {
+      color: var(--danger);
+      font-weight: 800;
+    }
+
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        width: min(100% - 12px, 1480px);
+        padding-top: max(12px, env(safe-area-inset-top));
+      }
+
+      .topbar,
+      .chart-wrap {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+
+      .actions {
+        justify-content: stretch;
+        min-width: 0;
+        gap: 6px;
+      }
+
+      .actions .btn {
+        flex: 1 1 calc(50% - 6px);
+        padding-inline: 8px;
+      }
+
+      .subtitle {
+        font-size: 0.94rem;
+      }
+
+      .panel-inner {
+        padding: 13px;
+      }
+
+      .panel-head {
+        padding: 12px 13px;
+      }
+
+      .input-grid,
+      .kpi-grid,
+      .detail-grid,
+      .mini-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .legend {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .chart-shell {
+        min-height: 270px;
+      }
+
+      canvas {
+        height: 270px;
+      }
+    }
+
+    @media (max-width: 410px) {
+      .actions .btn {
+        font-size: 0.92rem;
+      }
+
+      h1 {
+        font-size: 1.58rem;
+      }
+
+      .legend {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .app {
+        width: 100%;
+        padding: 0;
+      }
+
+      .actions {
+        display: none;
+      }
+
+      .panel {
+        break-inside: avoid;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">HVAC field tool</p>
+        <h1>Psychrometric Load Calculator</h1>
+        <p class="subtitle">Outdoor air, return/indoor air, mixed air, and leaving-coil air with sensible, latent, total load, grains, dew point, wet bulb, tons, SHR, and condensate.</p>
+      </div>
+      <div class="actions" aria-label="Calculator actions">
+        <button class="btn primary" id="exportBtn" type="button" title="Export the current report as CSV">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          Export
+        </button>
+        <button class="btn" id="printBtn" type="button" title="Print the current report">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+          Print
+        </button>
+        <button class="btn" id="shareBtn" type="button" title="Share this calculator">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-4.2"/><path d="M8.6 13.4l6.8 4.2"/></svg>
+          Share
+        </button>
+        <button class="btn" id="resetBtn" type="button" title="Reset to starter values">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
+          Reset
+        </button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="left-stack" aria-label="Inputs">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Airflow and Pressure</h2>
+              <p class="panel-note">Imperial units for field measurements.</p>
+            </div>
+            <span class="state-chip" id="pressureChip">14.70 psia</span>
+          </div>
+          <div class="panel-inner">
+            <div class="input-grid">
+              <label class="field">
+                <span>Total supply airflow, CFM</span>
+                <input id="totalCfm" type="number" min="1" step="10" value="1200" inputmode="decimal">
+              </label>
+              <label class="field">
+                <span>Elevation, ft</span>
+                <input id="elevationFt" type="number" step="100" value="0" inputmode="decimal">
+              </label>
+              <div class="field wide">
+                <span>Outdoor air entry</span>
+                <div class="segmented" role="group" aria-label="Outdoor air entry mode">
+                  <button type="button" id="modePercent" class="active" data-mode="percent">Percent</button>
+                  <button type="button" id="modeCfm" data-mode="cfm">CFM</button>
+                </div>
+              </div>
+              <label class="field">
+                <span>Outdoor air, %</span>
+                <input id="oaPercent" type="number" min="0" max="100" step="1" value="15" inputmode="decimal">
+              </label>
+              <label class="field">
+                <span>Outdoor air, CFM</span>
+                <input id="oaCfm" type="number" min="0" step="10" value="180" inputmode="decimal" readonly>
+              </label>
+              <label class="switch wide">
+                <input id="manualPressure" type="checkbox">
+                Manual barometric pressure
+              </label>
+              <label class="field">
+                <span>Barometer, inHg</span>
+                <input id="pressureInHg" type="number" min="15" max="32" step="0.01" value="29.92" inputmode="decimal" readonly>
+              </label>
+              <label class="field">
+                <span>Fan heat gain, %</span>
+                <input id="fanGainPct" type="number" min="0" step="0.1" value="0" inputmode="decimal">
+              </label>
+            </div>
+            <div class="status" id="statusText"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Air Conditions</h2>
+              <p class="panel-note">Dry bulb and relative humidity at each measurement point.</p>
+            </div>
+          </div>
+          <div class="panel-inner state-list">
+            <div class="state-card outdoor">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Outdoor Air</h3>
+                  <p class="panel-note">OA entering the unit or mixing box.</p>
+                </div>
+                <span class="state-chip">OA</span>
+              </div>
+              <div class="panel-inner">
+                <div class="input-grid">
+                  <label class="field">
+                    <span>Dry bulb, deg F</span>
+                    <input id="outdoorDb" type="number" step="0.1" value="95" inputmode="decimal">
+                  </label>
+                  <label class="field">
+                    <span>Relative humidity, %</span>
+                    <input id="outdoorRh" type="number" min="1" max="100" step="1" value="50" inputmode="decimal">
+                  </label>
+                </div>
+                <div class="mini-grid" id="outdoorMini"></div>
+              </div>
+            </div>
+
+            <div class="state-card return">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Indoor / Return Air</h3>
+                  <p class="panel-note">Room air or return air before outdoor-air mixing.</p>
+                </div>
+                <span class="state-chip">RA</span>
+              </div>
+              <div class="panel-inner">
+                <div class="input-grid">
+                  <label class="field">
+                    <span>Dry bulb, deg F</span>
+                    <input id="indoorDb" type="number" step="0.1" value="75" inputmode="decimal">
+                  </label>
+                  <label class="field">
+                    <span>Relative humidity, %</span>
+                    <input id="indoorRh" type="number" min="1" max="100" step="1" value="50" inputmode="decimal">
+                  </label>
+                </div>
+                <div class="mini-grid" id="indoorMini"></div>
+              </div>
+            </div>
+
+            <div class="state-card supply">
+              <div class="panel-head">
+                <div>
+                  <h3 class="panel-title">Leaving Coil Air</h3>
+                  <p class="panel-note">Air temperature and humidity leaving the coil, before fan heat gain.</p>
+                </div>
+                <span class="state-chip">LC</span>
+              </div>
+              <div class="panel-inner">
+                <div class="input-grid">
+                  <label class="field">
+                    <span>Leaving coil dry bulb, deg F</span>
+                    <input id="supplyDb" type="number" step="0.1" value="55" inputmode="decimal">
+                  </label>
+                  <label class="field">
+                    <span>Leaving coil RH, %</span>
+                    <input id="supplyRh" type="number" min="1" max="100" step="1" value="90" inputmode="decimal">
+                  </label>
+                </div>
+                <div class="mini-grid" id="supplyMini"></div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="right-stack" aria-label="Results">
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Load Summary</h2>
+              <p class="panel-note">Positive values mean heat or moisture is removed from the air stream.</p>
+            </div>
+            <span class="pill" id="modePill">Cooling</span>
+          </div>
+          <div class="panel-inner">
+            <div class="kpi-grid">
+              <div class="kpi">
+                <div class="label">Coil total</div>
+                <div class="value" id="coilTotal">--</div>
+                <div class="sub" id="coilTons">--</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Coil sensible</div>
+                <div class="value" id="coilSensible">--</div>
+                <div class="sub" id="coilDeltaT">--</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Coil latent</div>
+                <div class="value" id="coilLatent">--</div>
+                <div class="sub" id="coilShr">--</div>
+              </div>
+              <div class="kpi">
+                <div class="label">Condensate</div>
+                <div class="value" id="condensate">--</div>
+                <div class="sub" id="moistureRate">--</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Breakdown</h2>
+              <p class="panel-note">Mixed-air coil load, zone load, and outdoor-air load.</p>
+            </div>
+          </div>
+          <div class="panel-inner">
+            <div class="detail-grid">
+              <div class="detail">
+                <h3>Coil: Mixed to Leaving Coil</h3>
+                <dl id="coilDetails"></dl>
+              </div>
+              <div class="detail">
+                <h3>Zone: Indoor to Supply After Fan</h3>
+                <dl id="zoneDetails"></dl>
+              </div>
+              <div class="detail">
+                <h3>Outdoor Air: Mixed Minus Indoor</h3>
+                <dl id="oaDetails"></dl>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Psychrometric Plot</h2>
+              <p class="panel-note">Dry bulb versus moisture content, with a saturation curve.</p>
+            </div>
+          </div>
+          <div class="panel-inner chart-wrap">
+            <div class="chart-shell">
+              <canvas id="psychChart" width="900" height="360" aria-label="Psychrometric point chart"></canvas>
+            </div>
+            <div class="legend" aria-label="Chart legend">
+              <div class="legend-item"><span class="dot outdoor"></span>Outdoor air</div>
+              <div class="legend-item"><span class="dot return"></span>Indoor / return</div>
+              <div class="legend-item"><span class="dot mix"></span>Mixed air</div>
+              <div class="legend-item"><span class="dot supply"></span>Leaving coil</div>
+              <div class="legend-item"><span class="dot delivered"></span>Supply after fan</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">State Points</h2>
+              <p class="panel-note">Calculated air properties at the current pressure.</p>
+            </div>
+          </div>
+          <div class="panel-inner">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Point</th>
+                    <th>DB deg F</th>
+                    <th>RH %</th>
+                    <th>WB deg F</th>
+                    <th>DP deg F</th>
+                    <th>W lb/lb</th>
+                    <th>Grains/lb</th>
+                    <th>h BTU/lb</th>
+                    <th>v ft3/lb</th>
+                  </tr>
+                </thead>
+                <tbody id="stateRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">Assumptions</h2>
+            </div>
+          </div>
+          <div class="panel-inner">
+            <p class="assumptions">
+              <span><strong>Pressure:</strong> Standard atmosphere from elevation unless manual barometer is checked.</span>
+              <span><strong>Loads:</strong> Coil load uses mixed air to leaving-coil air. Fan gain adds downstream sensible heat for the supply-after-fan zone load.</span>
+              <span><strong>Wet bulb:</strong> Thermodynamic estimate found by matching saturated-air enthalpy at the same pressure.</span>
+              <span><strong>Field note:</strong> Check sensor placement, airflow, economizer position, and equipment fan heat when comparing to measured capacity.</span>
+            </p>
+          </div>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const defaults = {
+        totalCfm: 1200,
+        elevationFt: 0,
+        oaPercent: 15,
+        oaCfm: 180,
+        pressureInHg: 29.92,
+        fanGainPct: 0,
+        outdoorDb: 95,
+        outdoorRh: 50,
+        indoorDb: 75,
+        indoorRh: 50,
+        supplyDb: 55,
+        supplyRh: 90
+      };
+
+      const colors = {
+        outdoor: "#b45309",
+        indoor: "#0f766e",
+        mixed: "#7c3aed",
+        supply: "#2563eb",
+        delivered: "#be123c",
+        grid: "#d8e2dd",
+        text: "#18211f",
+        muted: "#60706b"
+      };
+
+      let oaMode = "percent";
+      let lastReport = null;
+      const storageKey = "psychrometric-load-calculator:v1";
+
+      const $ = (id) => document.getElementById(id);
+      const inputIds = Object.keys(defaults);
+      const allInputs = inputIds.map((id) => $(id)).filter(Boolean);
+
+      const clamp = (value, low, high) => Math.min(Math.max(value, low), high);
+      const fToC = (f) => (f - 32) * 5 / 9;
+      const cToF = (c) => c * 9 / 5 + 32;
+      const kPaToPsi = (kPa) => kPa * 0.1450377377;
+      const kPaToInHg = (kPa) => kPa * 0.2952998307;
+      const inHgToKPa = (inHg) => inHg / 0.2952998307;
+      const fmt = (value, digits) => Number.isFinite(value) ? value.toLocaleString(undefined, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      }) : "--";
+      const fmtInt = (value) => Number.isFinite(value) ? Math.round(value).toLocaleString() : "--";
+      const signed = (value, digits) => {
+        if (!Number.isFinite(value)) return "--";
+        const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+        return sign + fmt(Math.abs(value), digits);
+      };
+
+      function readNumber(id, fallback) {
+        const el = $(id);
+        if (!el) return fallback;
+        const value = parseFloat(el.value);
+        return Number.isFinite(value) ? value : fallback;
+      }
+
+      function setStatus(message, error) {
+        $("statusText").innerHTML = message ? `<span class="${error ? "error" : ""}">${message}</span>` : "";
+      }
+
+      function getStorage() {
+        try {
+          return window.localStorage || null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function saveSettings() {
+        try {
+          const storage = getStorage();
+          if (!storage) return;
+          const values = {};
+          inputIds.forEach((id) => {
+            if ($(id)) values[id] = $(id).value;
+          });
+          storage.setItem(storageKey, JSON.stringify({
+            values,
+            oaMode,
+            manualPressure: $("manualPressure").checked
+          }));
+        } catch (error) {
+          // Storage can be blocked in some private browsing modes.
+        }
+      }
+
+      function restoreSettings() {
+        const storage = getStorage();
+        if (!storage) return;
+        try {
+          const saved = JSON.parse(storage.getItem(storageKey) || "null");
+          if (!saved || !saved.values) return;
+          inputIds.forEach((id) => {
+            if ($(id) && saved.values[id] !== undefined) $(id).value = saved.values[id];
+          });
+          oaMode = saved.oaMode === "cfm" ? "cfm" : "percent";
+          $("manualPressure").checked = Boolean(saved.manualPressure);
+        } catch (error) {
+          storage.removeItem(storageKey);
+        }
+      }
+
+      function pressureFromElevation(ft) {
+        const meters = ft * 0.3048;
+        const kPa = 101.325 * Math.pow(1 - 2.25577e-5 * meters, 5.25588);
+        return kPa;
+      }
+
+      function saturationPressureKPa(tempC) {
+        if (tempC >= 0) {
+          return 0.61121 * Math.exp((18.678 - tempC / 234.5) * (tempC / (257.14 + tempC)));
+        }
+        return 0.61115 * Math.exp((23.036 - tempC / 333.7) * (tempC / (279.82 + tempC)));
+      }
+
+      function humidityRatioFromPv(pvKPa, pressureKPa) {
+        return 0.621945 * pvKPa / Math.max(pressureKPa - pvKPa, 0.001);
+      }
+
+      function saturationHumidityRatio(tempF, pressureKPa) {
+        const pws = saturationPressureKPa(fToC(tempF));
+        return humidityRatioFromPv(Math.min(pws, pressureKPa * 0.98), pressureKPa);
+      }
+
+      function enthalpyIP(tempF, humidityRatio) {
+        return 0.24 * tempF + humidityRatio * (1061 + 0.444 * tempF);
+      }
+
+      function dbFromEnthalpyHumidity(enthalpy, humidityRatio) {
+        return (enthalpy - 1061 * humidityRatio) / (0.24 + 0.444 * humidityRatio);
+      }
+
+      function specificVolume(tempF, humidityRatio, pressureKPa) {
+        const pressurePsi = kPaToPsi(pressureKPa);
+        return 0.370486 * (tempF + 459.67) * (1 + 1.607858 * humidityRatio) / pressurePsi;
+      }
+
+      function dewPointFromPv(pvKPa) {
+        let low = -100;
+        let high = 100;
+        for (let i = 0; i < 70; i += 1) {
+          const mid = (low + high) / 2;
+          if (saturationPressureKPa(mid) < pvKPa) {
+            low = mid;
+          } else {
+            high = mid;
+          }
+        }
+        return cToF((low + high) / 2);
+      }
+
+      function wetBulbEstimate(tempF, humidityRatio, pressureKPa, enthalpy) {
+        const pv = pressureKPa * humidityRatio / (0.621945 + humidityRatio);
+        const dewF = dewPointFromPv(pv);
+        let low = Math.min(dewF, tempF);
+        let high = Math.max(dewF, tempF);
+        for (let i = 0; i < 70; i += 1) {
+          const mid = (low + high) / 2;
+          const ws = saturationHumidityRatio(mid, pressureKPa);
+          const hs = enthalpyIP(mid, ws);
+          if (hs < enthalpy) {
+            low = mid;
+          } else {
+            high = mid;
+          }
+        }
+        return clamp((low + high) / 2, -100, 212);
+      }
+
+      function relativeHumidityFromTW(tempF, humidityRatio, pressureKPa) {
+        const pv = pressureKPa * humidityRatio / (0.621945 + humidityRatio);
+        const pws = saturationPressureKPa(fToC(tempF));
+        return clamp(pv / pws * 100, 0, 999);
+      }
+
+      function stateFromDbRh(label, tempF, rhPct, pressureKPa) {
+        const rh = clamp(rhPct, 0.1, 100);
+        const pws = saturationPressureKPa(fToC(tempF));
+        const pv = Math.min(pws * rh / 100, pressureKPa * 0.98);
+        const W = humidityRatioFromPv(pv, pressureKPa);
+        const h = enthalpyIP(tempF, W);
+        const dp = dewPointFromPv(pv);
+        const wb = wetBulbEstimate(tempF, W, pressureKPa, h);
+        const v = specificVolume(tempF, W, pressureKPa);
+        return {
+          label,
+          dbF: tempF,
+          rh,
+          W,
+          grains: W * 7000,
+          h,
+          dpF: dp,
+          wbF: wb,
+          v
+        };
+      }
+
+      function stateFromHW(label, enthalpy, humidityRatio, pressureKPa) {
+        const dbF = dbFromEnthalpyHumidity(enthalpy, humidityRatio);
+        const pv = pressureKPa * humidityRatio / (0.621945 + humidityRatio);
+        const rh = relativeHumidityFromTW(dbF, humidityRatio, pressureKPa);
+        const dp = dewPointFromPv(pv);
+        const wb = wetBulbEstimate(dbF, humidityRatio, pressureKPa, enthalpy);
+        return {
+          label,
+          dbF,
+          rh,
+          W: humidityRatio,
+          grains: humidityRatio * 7000,
+          h: enthalpy,
+          dpF: dp,
+          wbF: wb,
+          v: specificVolume(dbF, humidityRatio, pressureKPa)
+        };
+      }
+
+      function getPressureKPa() {
+        const manual = $("manualPressure").checked;
+        const elevation = readNumber("elevationFt", defaults.elevationFt);
+        if (manual) {
+          return inHgToKPa(clamp(readNumber("pressureInHg", defaults.pressureInHg), 15, 32));
+        }
+        const kPa = pressureFromElevation(elevation);
+        $("pressureInHg").value = fmt(kPaToInHg(kPa), 2).replace(/,/g, "");
+        return kPa;
+      }
+
+      function computeLoad(from, to, massDryLbHr) {
+        const total = massDryLbHr * (from.h - to.h);
+        const avgW = (from.W + to.W) / 2;
+        const sensible = massDryLbHr * (0.24 + 0.444 * avgW) * (from.dbF - to.dbF);
+        const latent = total - sensible;
+        const moistureLbHr = massDryLbHr * (from.W - to.W);
+        return { total, sensible, latent, moistureLbHr };
+      }
+
+      function modeLabel(value) {
+        if (value > 50) return "Cooling";
+        if (value < -50) return "Heating";
+        return "Neutral";
+      }
+
+      function setDl(id, rows) {
+        const dl = $(id);
+        dl.innerHTML = rows.map(([key, value]) => `<dt>${key}</dt><dd>${value}</dd>`).join("");
+      }
+
+      function setMini(id, state) {
+        $(id).innerHTML = [
+          ["WB", `${fmt(state.wbF, 1)} F`],
+          ["DP", `${fmt(state.dpF, 1)} F`],
+          ["Grains", fmt(state.grains, 1)]
+        ].map(([label, value]) => `<div class="mini"><b>${value}</b><span>${label}</span></div>`).join("");
+      }
+
+      function updateOaInputs(totalCfm) {
+        const percentInput = $("oaPercent");
+        const cfmInput = $("oaCfm");
+        const modeButtons = document.querySelectorAll(".segmented button");
+        modeButtons.forEach((button) => button.classList.toggle("active", button.dataset.mode === oaMode));
+
+        if (oaMode === "percent") {
+          percentInput.readOnly = false;
+          cfmInput.readOnly = true;
+          const percent = clamp(readNumber("oaPercent", defaults.oaPercent), 0, 100);
+          cfmInput.value = fmt(totalCfm * percent / 100, 0).replace(/,/g, "");
+        } else {
+          percentInput.readOnly = true;
+          cfmInput.readOnly = false;
+          const cfm = clamp(readNumber("oaCfm", defaults.oaCfm), 0, totalCfm);
+          percentInput.value = fmt(totalCfm > 0 ? cfm / totalCfm * 100 : 0, 1).replace(/,/g, "");
+        }
+      }
+
+      function drawChart(report) {
+        const canvas = $("psychChart");
+        const ctx = canvas.getContext("2d");
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        const width = Math.max(520, rect.width || 900);
+        const height = Math.max(300, rect.height || 320);
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+
+        const pad = { left: 54, right: 18, top: 18, bottom: 42 };
+        const xMin = 30;
+        const xMax = 110;
+        const yMin = 0;
+        const yMax = Math.max(130, Math.ceil(Math.max(
+          report.outdoor.grains,
+          report.indoor.grains,
+          report.mixed.grains,
+          report.supply.grains,
+          report.delivered.grains,
+          100
+        ) / 20) * 20 + 20);
+        const plotW = width - pad.left - pad.right;
+        const plotH = height - pad.top - pad.bottom;
+        const x = (db) => pad.left + (db - xMin) / (xMax - xMin) * plotW;
+        const y = (grains) => pad.top + (yMax - grains) / (yMax - yMin) * plotH;
+
+        ctx.fillStyle = "#fbfdfc";
+        ctx.fillRect(0, 0, width, height);
+        ctx.strokeStyle = colors.grid;
+        ctx.lineWidth = 1;
+        ctx.fillStyle = colors.muted;
+        ctx.font = "12px Segoe UI, Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+
+        for (let db = xMin; db <= xMax; db += 10) {
+          ctx.beginPath();
+          ctx.moveTo(x(db), pad.top);
+          ctx.lineTo(x(db), pad.top + plotH);
+          ctx.stroke();
+          ctx.fillText(String(db), x(db), pad.top + plotH + 9);
+        }
+
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        for (let grains = yMin; grains <= yMax; grains += 20) {
+          ctx.beginPath();
+          ctx.moveTo(pad.left, y(grains));
+          ctx.lineTo(pad.left + plotW, y(grains));
+          ctx.stroke();
+          ctx.fillText(String(grains), pad.left - 8, y(grains));
+        }
+
+        ctx.strokeStyle = "#90a8a0";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let db = xMin; db <= xMax; db += 1) {
+          const grains = saturationHumidityRatio(db, report.pressureKPa) * 7000;
+          if (db === xMin) ctx.moveTo(x(db), y(clamp(grains, yMin, yMax)));
+          else ctx.lineTo(x(db), y(clamp(grains, yMin, yMax)));
+        }
+        ctx.stroke();
+
+        function line(a, b, stroke) {
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 5]);
+          ctx.beginPath();
+          ctx.moveTo(x(a.dbF), y(a.grains));
+          ctx.lineTo(x(b.dbF), y(b.grains));
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        line(report.indoor, report.mixed, "#7c3aed");
+        line(report.outdoor, report.mixed, "#7c3aed");
+        line(report.mixed, report.supply, colors.supply);
+        if (Math.abs(report.fanHeat) > 1) {
+          line(report.supply, report.delivered, colors.delivered);
+        }
+
+        function point(state, color, label, offsetY) {
+          const px = x(state.dbF);
+          const py = y(state.grains);
+          ctx.fillStyle = color;
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(px, py, 7, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = colors.text;
+          ctx.font = "700 12px Segoe UI, Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          ctx.fillText(label, px, py - 10 + offsetY);
+        }
+
+        point(report.outdoor, colors.outdoor, "OA", -1);
+        point(report.indoor, colors.indoor, "RA", -1);
+        point(report.mixed, colors.mixed, "MA", 24);
+        point(report.supply, colors.supply, "LC", -1);
+        if (Math.abs(report.fanHeat) > 1) {
+          point(report.delivered, colors.delivered, "SF", 24);
+        }
+
+        ctx.fillStyle = colors.muted;
+        ctx.font = "12px Segoe UI, Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText("Dry bulb, deg F", pad.left + plotW / 2, height - 4);
+        ctx.save();
+        ctx.translate(14, pad.top + plotH / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText("Moisture, grains/lb dry air", 0, 0);
+        ctx.restore();
+      }
+
+      function stateRow(state) {
+        return `<tr>
+          <td>${state.label}</td>
+          <td>${fmt(state.dbF, 1)}</td>
+          <td>${fmt(state.rh, 1)}</td>
+          <td>${fmt(state.wbF, 1)}</td>
+          <td>${fmt(state.dpF, 1)}</td>
+          <td>${fmt(state.W, 5)}</td>
+          <td>${fmt(state.grains, 1)}</td>
+          <td>${fmt(state.h, 2)}</td>
+          <td>${fmt(state.v, 2)}</td>
+        </tr>`;
+      }
+
+      function makeCsv(report) {
+        const lines = [];
+        lines.push(["Psychrometric Load Calculator"].join(","));
+        lines.push(["Pressure psia", fmt(kPaToPsi(report.pressureKPa), 3), "Pressure inHg", fmt(kPaToInHg(report.pressureKPa), 2)].join(","));
+        lines.push(["Total CFM", fmt(report.totalCfm, 0), "Outdoor air CFM", fmt(report.oaCfm, 0), "Outdoor air % volume", fmt(report.oaPercent, 1), "Outdoor air % mass", fmt(report.oaMassPercent, 1)].join(","));
+        lines.push(["Fan heat gain %", fmt(report.fanGainPct, 1), "Fan sensible gain BTU/hr", fmt(report.fanHeat, 0)].join(","));
+        lines.push("");
+        lines.push(["State","DB F","RH %","WB F","DP F","W lb/lb","Grains/lb","h BTU/lb","v ft3/lb"].join(","));
+        [report.outdoor, report.indoor, report.mixed, report.supply, report.delivered].forEach((state) => {
+          lines.push([state.label, fmt(state.dbF, 1), fmt(state.rh, 1), fmt(state.wbF, 1), fmt(state.dpF, 1), fmt(state.W, 5), fmt(state.grains, 1), fmt(state.h, 2), fmt(state.v, 2)].join(","));
+        });
+        lines.push("");
+        lines.push(["Load","Total BTU/hr","Sensible BTU/hr","Latent BTU/hr","Moisture lb/hr","Tons","SHR"].join(","));
+        [
+          ["Coil Mixed to Leaving Coil", report.coil],
+          ["Zone Indoor to Supply After Fan", report.zone],
+          ["Outdoor Air Mixed Minus Indoor", report.vent]
+        ].forEach(([name, load]) => {
+          const shr = Math.abs(load.total) > 1 ? load.sensible / load.total : 0;
+          lines.push([name, fmt(load.total, 0), fmt(load.sensible, 0), fmt(load.latent, 0), fmt(load.moistureLbHr, 2), fmt(load.total / 12000, 2), fmt(shr, 2)].join(","));
+        });
+        return lines.join("\r\n");
+      }
+
+      function calculate() {
+        const totalCfm = Math.max(readNumber("totalCfm", defaults.totalCfm), 1);
+        updateOaInputs(totalCfm);
+
+        const pressureKPa = getPressureKPa();
+        const pressurePsi = kPaToPsi(pressureKPa);
+        $("pressureChip").textContent = `${fmt(pressurePsi, 2)} psia`;
+        $("pressureInHg").readOnly = !$("manualPressure").checked;
+
+        const outdoor = stateFromDbRh("Outdoor air", readNumber("outdoorDb", defaults.outdoorDb), readNumber("outdoorRh", defaults.outdoorRh), pressureKPa);
+        const indoor = stateFromDbRh("Indoor / return", readNumber("indoorDb", defaults.indoorDb), readNumber("indoorRh", defaults.indoorRh), pressureKPa);
+        const supply = stateFromDbRh("Leaving coil", readNumber("supplyDb", defaults.supplyDb), readNumber("supplyRh", defaults.supplyRh), pressureKPa);
+
+        const oaCfm = clamp(readNumber("oaCfm", defaults.oaCfm), 0, totalCfm);
+        const raCfm = Math.max(totalCfm - oaCfm, 0);
+        const oaMass = oaCfm * 60 / outdoor.v;
+        const raMass = raCfm * 60 / indoor.v;
+        const mixedMass = Math.max(oaMass + raMass, 0.0001);
+        const mixedW = (oaMass * outdoor.W + raMass * indoor.W) / mixedMass;
+        const mixedH = (oaMass * outdoor.h + raMass * indoor.h) / mixedMass;
+        const mixed = stateFromHW("Mixed air", mixedH, mixedW, pressureKPa);
+        const supplyMass = totalCfm * 60 / mixed.v;
+        const fanGainPct = Math.max(readNumber("fanGainPct", defaults.fanGainPct), 0);
+
+        const coil = computeLoad(mixed, supply, supplyMass);
+        const fanHeat = Math.abs(coil.total) * fanGainPct / 100;
+        const deliveredH = supply.h + fanHeat / supplyMass;
+        const delivered = stateFromHW("Supply after fan", deliveredH, supply.W, pressureKPa);
+
+        const zone = computeLoad(indoor, delivered, supplyMass);
+        const vent = computeLoad(mixed, indoor, supplyMass);
+        const condensateLbHr = Math.max(coil.moistureLbHr, 0);
+        const condensateGph = condensateLbHr / 8.345;
+        const condensatePintsHr = condensateLbHr / 1.043;
+        const shr = Math.abs(coil.total) > 1 ? coil.sensible / coil.total : 0;
+        const mode = modeLabel(coil.total);
+        const oaPercent = totalCfm > 0 ? oaCfm / totalCfm * 100 : 0;
+        const oaMassPercent = mixedMass > 0 ? oaMass / mixedMass * 100 : 0;
+
+        setMini("outdoorMini", outdoor);
+        setMini("indoorMini", indoor);
+        setMini("supplyMini", supply);
+
+        $("modePill").textContent = mode;
+        $("modePill").className = `pill ${mode === "Heating" ? "heat" : mode === "Neutral" ? "warn" : ""}`;
+        $("coilTotal").textContent = `${fmtInt(Math.abs(coil.total))}`;
+        $("coilTons").textContent = `${fmt(Math.abs(coil.total) / 12000, 2)} tons | ${mode}`;
+        $("coilSensible").textContent = `${signed(coil.sensible, 0)}`;
+        $("coilDeltaT").textContent = `Delta T ${signed(mixed.dbF - supply.dbF, 1)} F`;
+        $("coilLatent").textContent = `${signed(coil.latent, 0)}`;
+        $("coilShr").textContent = `SHR ${fmt(shr, 2)}`;
+        $("condensate").textContent = `${fmt(condensateGph, 2)} gph`;
+        $("moistureRate").textContent = `${fmt(condensateLbHr, 2)} lb/hr | ${fmt(condensatePintsHr, 1)} pints/hr`;
+
+        setDl("coilDetails", [
+          ["Total", `${signed(coil.total, 0)} BTU/hr`],
+          ["Sensible", `${signed(coil.sensible, 0)} BTU/hr`],
+          ["Latent", `${signed(coil.latent, 0)} BTU/hr`],
+          ["Fan gain", `${fmt(fanGainPct, 1)}% | ${fmt(fanHeat, 0)} BTU/hr`],
+          ["Supply after fan", `${fmt(delivered.dbF, 1)} F | ${fmt(delivered.rh, 1)}% RH`],
+          ["Tons", `${signed(coil.total / 12000, 2)}`],
+          ["Grains change", `${signed(mixed.grains - supply.grains, 1)}`],
+          ["Dry-air flow", `${fmtInt(supplyMass)} lb/hr`]
+        ]);
+
+        setDl("zoneDetails", [
+          ["Total", `${signed(zone.total, 0)} BTU/hr`],
+          ["Sensible", `${signed(zone.sensible, 0)} BTU/hr`],
+          ["Latent", `${signed(zone.latent, 0)} BTU/hr`],
+          ["Tons", `${signed(zone.total / 12000, 2)}`],
+          ["Room delta T", `${signed(indoor.dbF - delivered.dbF, 1)} F`],
+          ["Grains change", `${signed(indoor.grains - delivered.grains, 1)}`]
+        ]);
+
+        setDl("oaDetails", [
+          ["Total", `${signed(vent.total, 0)} BTU/hr`],
+          ["Sensible", `${signed(vent.sensible, 0)} BTU/hr`],
+          ["Latent", `${signed(vent.latent, 0)} BTU/hr`],
+          ["OA volume", `${fmt(oaPercent, 1)}% | ${fmtInt(oaCfm)} CFM`],
+          ["OA mass", `${fmt(oaMassPercent, 1)}%`],
+          ["Mixed air", `${fmt(mixed.dbF, 1)} F | ${fmt(mixed.rh, 1)}% RH`]
+        ]);
+
+        $("stateRows").innerHTML = [outdoor, indoor, mixed, supply, delivered].map(stateRow).join("");
+        setStatus("");
+
+        if (supply.rh > 100 || mixed.rh > 100 || delivered.rh > 100) {
+          setStatus("One calculated point is above saturation. Check RH, pressure, or temperature inputs.", true);
+        }
+
+        lastReport = {
+          pressureKPa,
+          totalCfm,
+          oaCfm,
+          oaPercent,
+          oaMassPercent,
+          outdoor,
+          indoor,
+          mixed,
+          supply,
+          delivered,
+          coil,
+          zone,
+          vent,
+          fanGainPct,
+          fanHeat
+        };
+
+        drawChart(lastReport);
+        saveSettings();
+      }
+
+      function reset() {
+        inputIds.forEach((id) => {
+          if ($(id)) $(id).value = defaults[id];
+        });
+        $("manualPressure").checked = false;
+        oaMode = "percent";
+        const storage = getStorage();
+        if (storage) storage.removeItem(storageKey);
+        calculate();
+      }
+
+      async function shareApp() {
+        const shareUrl = window.location.href.split("#")[0];
+        const shareData = {
+          title: "Psychrometric Load Calculator",
+          text: "Psychrometric Load Calculator",
+          url: shareUrl
+        };
+
+        try {
+          if (navigator.share && window.location.protocol !== "file:") {
+            await navigator.share(shareData);
+            setStatus("Share sheet opened.");
+            return;
+          }
+
+          if (navigator.clipboard && window.location.protocol !== "file:") {
+            await navigator.clipboard.writeText(shareUrl);
+            setStatus("Link copied.");
+            return;
+          }
+
+          setStatus("Upload this app folder to an HTTPS web host, then share that link.");
+        } catch (error) {
+          setStatus("Sharing was canceled or blocked.");
+        }
+      }
+
+      restoreSettings();
+      allInputs.forEach((input) => {
+        input.addEventListener("input", calculate);
+        input.addEventListener("change", calculate);
+      });
+      $("manualPressure").addEventListener("change", calculate);
+      $("modePercent").addEventListener("click", () => {
+        oaMode = "percent";
+        calculate();
+      });
+      $("modeCfm").addEventListener("click", () => {
+        oaMode = "cfm";
+        calculate();
+      });
+      $("resetBtn").addEventListener("click", reset);
+      $("printBtn").addEventListener("click", () => window.print());
+      $("shareBtn").addEventListener("click", shareApp);
+      $("exportBtn").addEventListener("click", () => {
+        if (!lastReport) calculate();
+        const blob = new Blob([makeCsv(lastReport)], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "psychrometric-load-report.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+      window.addEventListener("resize", () => {
+        if (lastReport) drawChart(lastReport);
+      });
+
+      if ("serviceWorker" in navigator && /^https?:$/.test(window.location.protocol)) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+        });
+      }
+
+      calculate();
+    })();
+  </script>
+</body>
+</html>
